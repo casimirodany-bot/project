@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App - SQLite</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .todo-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+            padding: 2rem;
+        }
+        
+        .todo-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #4a5568;
+        }
+        
+        .todo-header h1 {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .todo-input {
+            border-radius: 25px;
+            border: 2px solid #e2e8f0;
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .todo-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
+        
+        .todo-item {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .todo-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .todo-item.completed {
+            opacity: 0.7;
+            border-left-color: #48bb78;
+        }
+        
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #718096;
+        }
+        
+        .todo-text {
+            font-size: 1.1rem;
+            margin: 0;
+            color: #2d3748;
+            word-break: break-word;
+        }
+        
+        .todo-date {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 0.5rem;
+        }
+        
+        .btn-action {
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin: 0 0.25rem;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-complete {
+            background-color: #48bb78;
+            color: white;
+        }
+        
+        .btn-complete:hover {
+            background-color: #38a169;
+            transform: scale(1.1);
+        }
+        
+        .btn-edit {
+            background-color: #ed8936;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background-color: #dd6b20;
+            transform: scale(1.1);
+        }
+        
+        .btn-delete {
+            background-color: #f56565;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background-color: #e53e3e;
+            transform: scale(1.1);
+        }
+        
+        .filter-buttons {
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .filter-btn {
+            border: 2px solid #667eea;
+            background: transparent;
+            color: #667eea;
+            border-radius: 20px;
+            padding: 0.5rem 1.5rem;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .stat-item {
+            display: inline-block;
+            margin: 0 1rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="todo-container">
+                    <div class="todo-header">
+                        <h1><i class="fas fa-tasks"></i> Ma Todo List</h1>
+                        <p class="text-muted">Organisez vos tâches efficacement</p>
+                    </div>
+                    
+                    <div class="stats" id="stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalTasks">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="completedTasks">0</span>
+                            <span class="stat-label">Terminées</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="pendingTasks">0</span>
+                            <span class="stat-label">En cours</span>
+                        </div>
+                    </div>
+                    
+                    <form id="todoForm" class="mb-4">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-6">
+                                <input type="text" id="todoInput" class="form-control todo-input" 
+                                       placeholder="Ajouter une nouvelle tâche..." required>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="priorityInput" class="form-select">
+                                    <option value="normal" selected>Priorité normale</option>
+                                    <option value="low">Basse</option>
+                                    <option value="high">Haute</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" id="deadlineInput" class="form-control" placeholder="Échéance">
+                            </div>
+                        </div>
+                        <div class="mt-2 text-end">
+                            <button type="submit" class="btn btn-add">
+                                <i class="fas fa-plus"></i> Ajouter
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">Toutes</button>
+                        <button class="filter-btn" data-filter="pending">En cours</button>
+                        <button class="filter-btn" data-filter="completed">Terminées</button>
+                    </div>
+                    
+                    <div id="todoList">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h4>Aucune tâche pour le moment</h4>
+                            <p>Ajoutez votre première tâche ci-dessus</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal d'édition -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modifier la tâche</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editTaskId">
+                        <div class="mb-3">
+                            <label for="editTaskText" class="form-label">Texte de la tâche</label>
+                            <input type="text" class="form-control" id="editTaskText" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="updateTask()">Sauvegarder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script>
+        class TodoApp {
+            constructor() {
+                this.db = null;
+                this.currentFilter = 'all';
+                this.editModal = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Initialiser SQL.js
+                    const SQL = await initSqlJs({
+                        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                    });
+                    
+                    // Créer ou charger la base de données
+                    const data = localStorage.getItem('todoDatabase');
+                    if (data) {
+                        const uInt8Array = new Uint8Array(JSON.parse(data));
+                        this.db = new SQL.Database(uInt8Array);
+                    } else {
+                        this.db = new SQL.Database();
+                        this.createTable();
+                    }
+
+                    this.editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                    this.bindEvents();
+                    this.renderTodos();
+                    this.updateStats();
+                } catch (error) {
+                    console.error('Erreur lors de l\'initialisation:', error);
+                    alert('Erreur lors de l\'initialisation de l\'application');
+                }
+            }
+
+            createTable() {
+                const sql = `
+                    CREATE TABLE IF NOT EXISTS todos (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        text TEXT NOT NULL,
+                        completed BOOLEAN DEFAULT 0,
+                        priority TEXT DEFAULT 'normal',
+                        deadline TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                `;
+                this.db.run(sql);
+                this.saveDatabase();
+            }
+
+            saveDatabase() {
+                const data = this.db.export();
+                const buffer = Array.from(data);
+                localStorage.setItem('todoDatabase', JSON.stringify(buffer));
+            }
+
+            bindEvents() {
+                // Formulaire d'ajout
+                document.getElementById('todoForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addTodo();
+                });
+
+                // Boutons de filtre
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.setFilter(e.target.dataset.filter);
+                    });
+                });
+            }
+
+            addTodo() {
+                const input = document.getElementById('todoInput');
+                const priorityInput = document.getElementById('priorityInput');
+                const deadlineInput = document.getElementById('deadlineInput');
+                const text = input.value.trim();
+                const priority = priorityInput.value;
+                const deadline = deadlineInput.value;
+
+                if (text === '') return;
+
+                const sql = 'INSERT INTO todos (text, priority, deadline) VALUES (?, ?, ?)';
+                this.db.run(sql, [text, priority, deadline]);
+                this.saveDatabase();
+
+                input.value = '';
+                priorityInput.value = 'normal';
+                deadlineInput.value = '';
+                this.renderTodos();
+                this.updateStats();
+            }
+
+            toggleTodo(id) {
+                const sql = 'UPDATE todos SET completed = NOT completed WHERE id = ?';
+                this.db.run(sql, [id]);
+                this.saveDatabase();
+                this.renderTodos();
+                this.updateStats();
+            }
+
+            deleteTodo(id) {
+                if (confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) {
+                    const sql = 'DELETE FROM todos WHERE id = ?';
+                    this.db.run(sql, [id]);
+                    this.saveDatabase();
+                    this.renderTodos();
+                    this.updateStats();
+                }
+            }
+
+            editTodo(id) {
+                const sql = 'SELECT * FROM todos WHERE id = ?';
+                const stmt = this.db.prepare(sql);
+                stmt.bind([id]);
+                
+                if (stmt.step()) {
+                    const todo = stmt.getAsObject();
+                    document.getElementById('editTaskId').value = id;
+                    document.getElementById('editTaskText').value = todo.text;
+                    this.editModal.show();
+                }
+                stmt.free();
+            }
+
+            updateTask() {
+                const id = document.getElementById('editTaskId').value;
+                const text = document.getElementById('editTaskText').value.trim();
+                
+                if (text === '') return;
+
+                const sql = 'UPDATE todos SET text = ? WHERE id = ?';
+                this.db.run(sql, [text, id]);
+                this.saveDatabase();
+                
+                this.editModal.hide();
+                this.renderTodos();
+                this.updateStats();
+            }
+
+            setFilter(filter) {
+                this.currentFilter = filter;
+                
+                // Mettre à jour les boutons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+                
+                this.renderTodos();
+            }
+
+            getTodos() {
+                let sql = 'SELECT * FROM todos';
+                const params = [];
+
+                if (this.currentFilter === 'completed') {
+                    sql += ' WHERE completed = 1';
+                } else if (this.currentFilter === 'pending') {
+                    sql += ' WHERE completed = 0';
+                }
+
+                sql += ' ORDER BY created_at DESC';
+
+                const stmt = this.db.prepare(sql);
+                const todos = [];
+                
+                while (stmt.step()) {
+                    todos.push(stmt.getAsObject());
+                }
+                stmt.free();
+                
+                return todos;
+            }
+
+            renderTodos() {
+                const todos = this.getTodos();
+                const todoList = document.getElementById('todoList');
+                
+                if (todos.length === 0) {
+                    todoList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h4>Aucune tâche ${this.getFilterText()}</h4>
+                            <p>${this.getEmptyMessage()}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                todoList.innerHTML = todos.map(todo => `
+                    <div class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <p class="todo-text">${this.escapeHtml(todo.text)}</p>
+                                <div class="todo-date">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    ${new Date(todo.created_at).toLocaleDateString('fr-FR', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                    ${todo.deadline ? `<span class='ms-2 badge bg-warning text-dark'><i class='fas fa-hourglass-end'></i> Échéance: ${new Date(todo.deadline).toLocaleDateString('fr-FR')}</span>` : ''}
+                                    <span class="ms-2 badge ${todo.priority === 'high' ? 'bg-danger' : todo.priority === 'low' ? 'bg-secondary' : 'bg-primary'}">${todo.priority === 'high' ? 'Haute' : todo.priority === 'low' ? 'Basse' : 'Normale'}</span>
+                                </div>
+                            </div>
+                            <div class="todo-actions">
+                                <button class="btn-action btn-complete" onclick="app.toggleTodo(${todo.id})" 
+                                        title="${todo.completed ? 'Marquer comme non terminée' : 'Marquer comme terminée'}">
+                                    <i class="fas fa-${todo.completed ? 'undo' : 'check'}"></i>
+                                </button>
+                                <button class="btn-action btn-edit" onclick="app.editTodo(${todo.id})" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-action btn-delete" onclick="app.deleteTodo(${todo.id})" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            getFilterText() {
+                switch (this.currentFilter) {
+                    case 'completed': return 'terminée';
+                    case 'pending': return 'en cours';
+                    default: return 'pour le moment';
+                }
+            }
+
+            getEmptyMessage() {
+                switch (this.currentFilter) {
+                    case 'completed': return 'Aucune tâche terminée';
+                    case 'pending': return 'Toutes vos tâches sont terminées !';
+                    default: return 'Ajoutez votre première tâche ci-dessus';
+                }
+            }
+
+            updateStats() {
+                const totalSql = 'SELECT COUNT(*) as count FROM todos';
+                const completedSql = 'SELECT COUNT(*) as count FROM todos WHERE completed = 1';
+                
+                const totalStmt = this.db.prepare(totalSql);
+                totalStmt.step();
+                const total = totalStmt.getAsObject().count;
+                totalStmt.free();
+                
+                const completedStmt = this.db.prepare(completedSql);
+                completedStmt.step();
+                const completed = completedStmt.getAsObject().count;
+                completedStmt.free();
+                
+                const pending = total - completed;
+                
+                document.getElementById('totalTasks').textContent = total;
+                document.getElementById('completedTasks').textContent = completed;
+                document.getElementById('pendingTasks').textContent = pending;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Fonctions globales pour les événements onclick
+        let app;
+
+        window.updateTask = function() {
+            app.updateTask();
+        };
+
+        // Initialiser l'application
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new TodoApp();
+        });
+    </script>
+</body>
+</html>
